@@ -1,0 +1,3 @@
+libmutex.a
+libcircle-buffer.a
+*.o
