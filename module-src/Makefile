@@ -1,6 +1,6 @@
 ifneq ($(KERNELRELEASE),)
 	# kbuild part of makefile
-obj-m := hello.o
+obj-m := as-sys.o
 
 else
 	# normal makefile
