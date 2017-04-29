@@ -4,8 +4,10 @@
 // Can't include stdlib.h
 #include <stddef.h>
 #include <stdbool.h>
+#include "mutex.h"
 
 typedef struct __circle_buffer {
+    struct mutex tail_lock;
     volatile void * tail; /* The start for the producer to place data. */
     volatile void * head; /* The beginning of a consumer list */
 
