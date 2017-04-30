@@ -1,5 +1,5 @@
 CC:=gcc
-CFLAGS += -std=gnu99 -nostdlib
+CFLAGS += -std=gnu99 -ggdb
 
 TARGETS := libcircle-buffer.a
 
@@ -14,7 +14,7 @@ lib%.a: %.o
 	ar rcs $@ $<
 
 .PHONY: test
-test:
+test: libcircle-buffer.a
 	$(MAKE) -C $(PWD)/test test
 
 clean: 

@@ -9,9 +9,9 @@ struct mutex {
 };
 
 /* Lock the spin lock. */
-void spin_lock(struct mutex *lock);
+extern inline void spin_lock(struct mutex *lock);
 
 /* Unlock the spin lock. */
-void spin_unlock(struct mutex *lock);
+extern inline void spin_unlock(struct mutex *lock);
 
 #endif

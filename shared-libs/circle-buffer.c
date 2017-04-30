@@ -1,21 +1,14 @@
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include "asm-primitives.h"
 #include "mutex.h"
 #include "circle-buffer.h"
 
-/* 
- * A header containing metadata each entry into the buffer (so we can have
- * variable sized entries
- */
-struct buffer_entry_header {
-    size_t size;
-};
-
 static inline size_t increment_idx(size_t idx, size_t size) {
     idx += 1;
-    return  idx >= size ? idx : 0;
+    return  idx < size ? idx : 0;
 }
 
 void init_buffer(circle_buffer* buf, size_t data_size, size_t enteries) {
@@ -28,6 +21,7 @@ void init_buffer(circle_buffer* buf, size_t data_size, size_t enteries) {
 
 void deinit_buffer(circle_buffer *buf) {
     assert(buf);
+    assert(buf->start);
     free(buf->start);
     buf->start = NULL;
 }
@@ -48,7 +42,7 @@ void push(circle_buffer* buf, void* data_p) {
     ///////
     for(;;) {
         // Spin until we can fit anything...
-        while(!is_full(buf))
+        while(is_full(buf))
             __asm_pause();
 
         // We are now holding the lock, reconfirm we will fit.
@@ -59,14 +53,13 @@ void push(circle_buffer* buf, void* data_p) {
             continue;
         }
 
-        size_t oldtail = (size_t)buf->tail_idx;
+        size_t oldtail = buf->tail_idx;
         size_t newtail = increment_idx(oldtail, buf->size);
 
         // Place the data. (We have to do this with the lock to avoid race
         // conditions with the head. To reduce contention we could use a shadow
         // tail as well.)
         memcpy(buf->start + buf->data_size * oldtail, data_p, buf->data_size);
-
         buf->tail_idx = newtail;
         spin_unlock(&buf->tail_lock);
         break;
@@ -86,10 +79,15 @@ void pop(circle_buffer* buf, void* dest_p) {
 
     for(;;) {
         // Spin until we can fit anything...
-        while(!is_empty(buf))
+        while(is_empty(buf))
             __asm_pause();
 
-        size_t oldhead = (size_t)buf->head_idx;
+        size_t oldhead = buf->head_idx;
+
+        // Check if the head might have been emptied while we grabbed it.
+        if (is_empty(buf))
+            continue;
+
         size_t newhead = increment_idx(oldhead, buf->size);
 
         // Place the data into dest. 
@@ -113,5 +111,5 @@ inline int is_empty(circle_buffer* buf) {
  */
 inline int is_full(circle_buffer* buf) {
     assert(buf);
-    return increment_idx(buf->head_idx, buf->size) == buf->tail_idx;
+    return increment_idx(buf->tail_idx, buf->size) == buf->head_idx;
 }
