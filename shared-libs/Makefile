@@ -6,7 +6,7 @@ TARGETS := libcircle-buffer.a
 .PHONY: all clean
 all: $(TARGETS)
 
-libcircle-buffer.a: circle-buffer.o mutex.o
+libcircle-buffer.a: circle-buffer.o
 	ar rcs $@ $^
 	rm $^
 

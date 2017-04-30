@@ -17,6 +17,7 @@ void init_buffer(circle_buffer* buf, size_t data_size, size_t enteries) {
     buf->size = enteries;
     buf->head_idx = buf->tail_idx = 0;
     buf->start = malloc(data_size * enteries);
+    mutex_init(&buf->tail_lock);
 }
 
 void deinit_buffer(circle_buffer *buf) {
@@ -46,10 +47,10 @@ void push(circle_buffer* buf, void* data_p) {
             __asm_pause();
 
         // We are now holding the lock, reconfirm we will fit.
-        spin_lock(&buf->tail_lock);
+        mutex_lock(&buf->tail_lock);
 
         if (is_full(buf)) {
-            spin_unlock(&buf->tail_lock);
+            mutex_unlock(&buf->tail_lock);
             continue;
         }
 
@@ -61,7 +62,7 @@ void push(circle_buffer* buf, void* data_p) {
         // tail as well.)
         memcpy(buf->start + buf->data_size * oldtail, data_p, buf->data_size);
         buf->tail_idx = newtail;
-        spin_unlock(&buf->tail_lock);
+        mutex_unlock(&buf->tail_lock);
         break;
     }
 }

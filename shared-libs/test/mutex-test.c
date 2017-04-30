@@ -4,9 +4,9 @@
 struct mutex lock;
 
 int main() {
-    spin_lock(&lock);
-    spin_unlock(&lock);
-    spin_lock(&lock);
-    spin_unlock(&lock);
+    mutex_lock(&lock);
+    mutex_unlock(&lock);
+    mutex_lock(&lock);
+    mutex_unlock(&lock);
     return 0;
 }

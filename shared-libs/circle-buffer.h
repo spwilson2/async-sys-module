@@ -4,7 +4,12 @@
 // Can't include stdlib.h
 #include <stddef.h>
 #include <stdbool.h>
+
+#ifdef _LINUX_
+#include <linux/mutex.h>
+#else
 #include "mutex.h"
+#endif
 
 typedef struct __circle_buffer {
     size_t data_size;

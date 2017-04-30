@@ -3,7 +3,7 @@ CC:=gcc
 LDFLAGS:=-pthread
 circle-buffer-test: circle-buffer-test.o ../libcircle-buffer.a
 
-mutex-test: mutex-test.o ../mutex.c
+mutex-test: mutex-test.o
 
 test-mutex: mutex-test
 	`pwd`/mutex-test
