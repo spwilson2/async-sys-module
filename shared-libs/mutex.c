@@ -6,7 +6,7 @@
 void spin_lock(struct mutex *lock) {
     assert(lock);
     while (__sync_lock_test_and_set(&lock->locked, LOCKED) != UNLOCKED)
-        __asm__pause();
+        __asm_pause();
 
 }
 

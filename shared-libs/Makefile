@@ -13,5 +13,10 @@ libcircle-buffer.a: asm-primitives.o circle-buffer.o mutex.o
 lib%.a: %.o
 	ar rcs $@ $<
 
+.PHONY: test
+test:
+	$(MAKE) -C $(PWD)/test test
+
 clean: 
 	rm -f $(TARGETS)
+	$(MAKE) -C $(PWD)/test clean

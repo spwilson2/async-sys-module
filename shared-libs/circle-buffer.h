@@ -7,16 +7,22 @@
 #include "mutex.h"
 
 typedef struct __circle_buffer {
-    struct mutex tail_lock;
-    volatile void * tail; /* The start for the producer to place data. */
-    volatile void * head; /* The beginning of a consumer list */
+    size_t data_size;
+    size_t size;
 
-    volatile void * end; /* The final address+1 of the circular buffer. */
-    volatile void * start; /* The first address of the circular buffer. */
+    struct mutex tail_lock;
+    volatile size_t tail_idx; /* The start for the producer to place data. */
+    volatile size_t head_idx; /* The beginning of a consumer list */
+
+    void * start; /* The first address of the circular buffer. */
 } circle_buffer;
 
+
+void init_buffer(circle_buffer* buf, size_t data_size, size_t enteries);
+void deinit_buffer(circle_buffer *buf);
+
 /* Insert the given `void *` into the circular_buffer, may block if no space.. */
-void push(circle_buffer* buf, void* val_p, size_t size);
+void push(circle_buffer* buf, void* val_p);
 
 /* 
  * Pop the given `void *` out of the circular_buffer if it there is anything to consume
@@ -27,9 +33,9 @@ void pop(circle_buffer* buf, void* val_p);
 /* 
  * Will check the queue to see if there is anything remaining in the queue.
  */
-int is_empty(circle_buffer* buf);
+extern inline int is_empty(circle_buffer *buf);
 
 /* Check if there is enough space between head and tail to fit size */
-int can_fit(circle_buffer* buf, size_t size);
+extern inline int is_full(circle_buffer *buf);
 
 #endif
