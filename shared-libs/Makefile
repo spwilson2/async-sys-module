@@ -1,12 +1,12 @@
 CC:=gcc
-CFLAGS += -std=gnu99 -ggdb
+CFLAGS += -std=gnu99 -ggdb -O2
 
 TARGETS := libcircle-buffer.a
 
 .PHONY: all clean
 all: $(TARGETS)
 
-libcircle-buffer.a: asm-primitives.o circle-buffer.o mutex.o
+libcircle-buffer.a: circle-buffer.o mutex.o
 	ar rcs $@ $^
 	rm $^
 

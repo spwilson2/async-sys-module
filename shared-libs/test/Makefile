@@ -1,9 +1,9 @@
-CFLAGS:=-ggdb
+CFLAGS:=-ggdb -O2
 CC:=gcc
 LDFLAGS:=-pthread
 circle-buffer-test: circle-buffer-test.o ../libcircle-buffer.a
 
-mutex-test: mutex-test.o ../mutex.c ../asm-primitives.s
+mutex-test: mutex-test.o ../mutex.c
 
 test-mutex: mutex-test
 	`pwd`/mutex-test
