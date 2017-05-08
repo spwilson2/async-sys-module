@@ -24,6 +24,12 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff
     printk(KERN_INFO "Driver: write()\n");
     return len;
 }
+static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
+    printk(KERN_INFO "Driver: ioctl(%u, %lu)\n", cmd, arg);
+    // NOTE: To get the info from a pointer arg use:
+    // `copy_from_user`
+    return 0;
+}
 
 // Use our simple above defined ops to fill this function pointer interface out.
 static struct file_operations fops = {
@@ -31,7 +37,8 @@ static struct file_operations fops = {
     .open = my_open,
     .release = my_close,
     .read = my_read,
-    .write = my_write
+    .write = my_write,
+    .unlocked_ioctl = my_ioctl,
 };
 
 static struct miscdevice sample_device = {
@@ -50,7 +57,7 @@ int init_module(void)
      */
 
     int error;
-    if (error = misc_register(&sample_device)) {
+    if ((error = misc_register(&sample_device))) {
         pr_err("can't misc_register :(\n");
         return error;
     }

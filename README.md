@@ -130,6 +130,8 @@ keep the call structured [it's vararg as defined by header].)
 TODO: Might be worth switching from a `struct` which contains a lot of extra
 garbage for the `async_submit` to a `va_args` type function.
 
+See [](http://www.makelinux.net/ldd3/) for help.
+
 # Authors & Acknowledgements (Some omitted until more progress is made.)
 
 Sean Wilson <spwilson2@wisc.edu>
