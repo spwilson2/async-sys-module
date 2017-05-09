@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <sys/syscall.h>
+
 int main(void) {
     const static char fname[] = "/dev/as_sys";
 	int fd;
@@ -15,7 +17,8 @@ int main(void) {
 	}
 	printf("fd: %d\n", fd);
 	if (fd) {
-		ioctl(fd, _IOWR(22,2,sizeof(int)), (int)22, (int)33);
+		ioctl(fd, _IOWR(SYS_exit,2,sizeof(int)), (int)SYS_exit, (int)33);
+		printf("Didn't exit...\n");
 	} else {
 		printf("FAILED TO OPEN FILE\n");
 	}

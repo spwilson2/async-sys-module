@@ -11,24 +11,30 @@
 
 #include <as_sys/ioctl.h>
 
+static void *sys_call_table;
+
 /* Wrap the given callback syscall with memory space fixings so syscall check for correct
  * address space passes.
  */
-static void wrap_syscall(void(*callback)(void)) {
+// Doesn't seem necessary for syscalls that are in the kernel already.
+//static void wrap_syscall(void(*callback)(void)) {
+//
+//	/* src: http://www.linux-mag.com/id/651/ */
+//
+//	/* Save current fs and set it to valid address. */
+//	mm_segment_t fs = get_fs();
+//	set_fs(get_ds());
+//
+//	/* system calls can be invoked */
+//	callback();
+//
+//	/* Restore to return to user space */
+//	set_fs(fs);
+//}
 
-	/* src: http://www.linux-mag.com/id/651/ */
-
-	/* Save current fs and set it to valid address. */
-	mm_segment_t fs = get_fs();
-	set_fs(get_ds());
-
-	/* system calls can be invoked */
-	callback();
-
-	/* Restore to return to user space */
-	set_fs(fs);
-}
-
+/*
+Data-structures:
+*/
 
 static int my_open(struct inode *i, struct file *f) {
 	unsigned long flags;
@@ -72,6 +78,17 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
     printk(KERN_INFO "\t\t ioctl pid: %d\n", pid_nr(f->f_owner.pid));
 	read_unlock_irqrestore(&f->f_owner.lock, flags);
 
+	// Call the argd'th syscall
+	printk(KERN_INFO "sys_call_table: %p\n", sys_call_table);
+	void (**sys_call_addr)(void);
+	sys_call_addr = sys_call_table + arg * sizeof(void*);
+	printk(KERN_INFO "sys_call_table entry address: %p\n", sys_call_addr);
+	printk(KERN_INFO "sys_call address: %p\n", *sys_call_addr);
+
+	// Doesn't seem that the address space change is necessary.
+	//wrap_syscall(*sys_call_addr);
+	(*sys_call_addr)();
+
     return 0;
 }
 
@@ -103,6 +120,9 @@ static int __init as_sys_init_module(void)
         pr_err("can't misc_register :(\n");
         return error;
     }
+
+	sys_call_table = (void*) kallsyms_lookup_name("sys_call_table");
+	printk(KERN_DEBUG "sys_call_table addr: %p\n", sys_call_table);
 
     sample_device.mode = S_IROTH | S_IWOTH;
 
