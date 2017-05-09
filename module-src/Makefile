@@ -1,9 +1,8 @@
 ifneq ($(KERNELRELEASE),)
-	# kbuild part of makefile
-obj-m := as-sys.o
+
+include Kbuild
 
 else
-	# normal makefile
 KDIR ?= /lib/modules/`uname -r`/build
 
 default:
@@ -11,8 +10,4 @@ default:
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-
-# Module specific targets
-genbin:
-	echo "X" > hello.o_shipped
 endif
