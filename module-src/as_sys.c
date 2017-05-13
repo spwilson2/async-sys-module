@@ -10,6 +10,8 @@
 #include <asm/uaccess.h>
 
 #include <as_sys/ioctl.h>
+#include "ioctl_calls.h"
+#include "common.h"
 
 static void *sys_call_table;
 
@@ -60,12 +62,14 @@ static int my_open(struct inode *i, struct file *f) {
 
     return 0;
 }
+
 static int my_close(struct inode *i, struct file *f) {
     printk(KERN_INFO "Driver: close()\n");
     return 0;
 }
 
 static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
+    /*
 	unsigned long flags;
 
 	read_lock_irqsave(&f->f_owner.lock, flags);
@@ -88,6 +92,26 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 	// Doesn't seem that the address space change is necessary.
 	//wrap_syscall(*sys_call_addr);
 	(*sys_call_addr)();
+    */
+
+    // Ensure the magic header is intact.
+    if (_IOC_TYPE(cmd) != AS_SYS_MAGIC) {
+        mprintk(KERN_INFO "Invalid Magic Header provided.\n");
+        return -1;
+    }
+
+    // TODO: Switch into one of our supported functions.
+    switch (cmd) {
+        case AS_SYS_SETUP:
+            break;
+        case AS_SYS_GETEVENTS:
+            break;
+        case AS_SYS_DESTROY:
+            break;
+        default:
+            mprintk(KERN_INFO "Invalid ioctl command.\n");
+            return -1;
+    }
 
     return 0;
 }

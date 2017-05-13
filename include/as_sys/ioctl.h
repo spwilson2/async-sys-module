@@ -1,6 +1,7 @@
-#ifndef __AS_SYS__IOCTL_H_
-#define __AS_SYS__IOCTL_H_
+#ifndef __AS_SYS_IOCTL_H
+#define __AS_SYS_IOCTL_H
 /* Includes ioctl macros. */
+#include <linux/types.h>
 #include <linux/ioctl.h>
 
 /* Magic number for this ioctl driver */
@@ -13,5 +14,18 @@
 #define AS_SYS_GETEVENTS _IO(AS_SYS_MAGIC,   2, void*)
 /* Destroy the async ring manually */
 #define AS_SYS_DESTROY   _IOW(AS_SYS_MAGIC,  3, unsigned int)
+
+struct async_cb {
+    long number; /* The syscall number. */
+    void * vargs[]; /* NULL terminated list of arguments to the syscall of given number. */
+};
+
+/* Used to store information about results. */
+struct async_event {
+    struct async_cb* cbp; /* Pointer to the async_cb where event came from. */
+    __s64 res; /* Result of syscall. */
+};
+
+typedef __u64 async_context_t;
 
 #endif

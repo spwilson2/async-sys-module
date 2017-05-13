@@ -1,2 +1,2 @@
-ccflags-y := -I$(src)/../include
+ccflags-y := -I$(src)/../include -I$(src)/include
 obj-m := as_sys.o
