@@ -36,7 +36,7 @@ struct map_key {
 struct map_entry {
 	struct rb_node node;
 	struct map_key key;
-	void *buffer;
+	struct buffer_slab buffer;
 };
 
 /* A linked list of pointers to map enteries. */
@@ -139,7 +139,7 @@ map_insert(struct rb_root *root, struct map_entry *data)
  *
  */
 int
-alloc_buffer(size_t size, struct file *file, void *ret, buffer_id_t *id)
+alloc_buffer(size_t size, struct file *file, struct buffer_slab **buffer)
 {
 	/*
 	 * 1. Grab reader lock on file owner
@@ -162,17 +162,21 @@ alloc_buffer(size_t size, struct file *file, void *ret, buffer_id_t *id)
 		return false; // Failed to alloc.
 	}
 
+
 	/*
 	 * TODO: Need to set up the address space boundaries for the correct
 	 * process.
 	 */
 	/* Allocate space for our shared ring buffer. */
-	entry->buffer = kmalloc(size, GFP_USER);
-	if (!entry->buffer) {
+	entry->buffer.buffer = kmalloc(size, GFP_USER);
+	if (!entry->buffer.buffer) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
 	}
 
+	// Initilize the lock on the new entry's buffer and grab the lock.
+	spin_lock_init(&entry->buffer.spinlock);
+	spin_lock(&entry->buffer.spinlock);
 
 	/* Grab the read lock on the file so we can find the pid. */
 	read_lock(&file->f_owner.lock);
@@ -183,9 +187,20 @@ alloc_buffer(size_t size, struct file *file, void *ret, buffer_id_t *id)
 	if (!map_insert(&map_wrapper._root, entry)) {
 		// There was a duplicate....?
 		write_unlock(&map_wrapper.lock);
+
+		kfree(entry->buffer.buffer);
+		kfree(entry);
 		return false;
 	}
+	/*
+	 * We are holding the spinlock on the buffer so it cannnot be freed.
+	 * TODO: At some point could move to a mutex, although I think it would
+	 * be rare that we want to delete a buffer as we are also allocating
+	 * one.
+	 */
+	*buffer = &entry->buffer;
 	write_unlock(&map_wrapper.lock);
+
 	return true;
 }
 

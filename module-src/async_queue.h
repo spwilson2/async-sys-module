@@ -1,10 +1,10 @@
 #ifndef __Module_SRC_ASYNC_QUEUE_H
 #define __Module_SRC_ASYNC_QUEUE_H
 
+#include <linux/fs.h>
+#include <as_sys/ioctl.h>
+
 /* Initilize the asynchronous queue with the given buffer and events size. */
-void 
-init_async_queue(void* buffer, unsigned long nr_events, async_context_t ctx_idp);
-
-
+int init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ctx_id);
 
 #endif
