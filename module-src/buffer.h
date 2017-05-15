@@ -1,13 +1,15 @@
 #ifndef __MODULE_SRC_BUFFER_H
 #define __MODULE_SRC_BUFFER_H
 
-/* Allocate a buffer for a given file. */
-buffer_id_t alloc_buffer(size_t size, struct *file, void *ret);
+#include <linux/types.h>
+#include <linux/fs.h>
 
-/* Return a pointer to the buffer of given id. */
-void* get_buffer(buffer_id_t id);
+typedef unsigned long buffer_id_t;
+
+/* Allocate a buffer for a given file. */
+int alloc_buffer(size_t size, struct file *file, void *ret, buffer_id_t *id);
 
 /* Free the buffer for the given id. */
-void free_buffer(buffer_id_t id, struct *file);
+void free_buffer(buffer_id_t id, struct file *file);
 
 #endif

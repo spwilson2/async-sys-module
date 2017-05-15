@@ -1,2 +1,2 @@
 ccflags-y := -I$(src)/../include -I$(src)/include
-obj-m := as_sys.o
+obj-m := as_sys.o ioctl_calls.o buffer.o

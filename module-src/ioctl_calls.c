@@ -1,4 +1,5 @@
-
+#include <linux/fs.h>
+#include "ioctl_calls.h"
 
 /**
  * async_setup() - Allocate a syscall buffer for the user
@@ -60,7 +61,7 @@ async_getevents(void *user_argument, struct file *file_p)
 int 
 async_destroy(void *user_argument, struct file *file_p)
 {
-	async_context_t ctx = (async_context_t)user_pointer;
+	async_context_t ctx = (async_context_t)user_argument;
 	/*
 	 * 1. Validate the ctx number for this file.
 	 * 1. Delete any datastructures in aysnc_queue (might not need to do).

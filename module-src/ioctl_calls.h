@@ -2,11 +2,10 @@
 #define __MODULE_SRC_IOCTL_H
 #include <as_sys/ioctl.h>
 
-int async_setup(unsigned long nr_events, async_context_t *ctx_idp);
+int async_setup(void *user_argument, struct file *file_p);
 
-int async_getevents(async_context_t ctx, long min_nr, long max_nr, 
-                    struct async_event events[], struct timespec *timeout);
+int async_getevents(void *user_argument, struct file *file_p);
 
-int async_destroy(async_context_t ctx);
+int async_destroy(void *user_argument, struct file *file_p);
 
 #endif

@@ -1,7 +1,7 @@
 *.cmd
 a.out
 Module.symvers
-as_sys.ko
-as_sys.mod.c
+*.ko
+*.mod.c
 modules.order
 .tmp_versions
