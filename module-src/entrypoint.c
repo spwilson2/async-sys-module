@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
+* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
 *
 * This file is released under the GPLv2
 */
