@@ -294,6 +294,15 @@ buffer_free_file(struct file *file)
 	struct kernel_data *kernel_data;
 	struct file_ll_node *cur_node, *next_node;
 
+	/*
+	 * FIXME: Race condition if close is called twice. Could crash if try to
+	 * access private data with a double free. Fix would be some kind of
+	 * lock to prevent private_data from disappearing between this null
+	 * check and grabbing its spinlock.
+	 */
+	if (!file->private_data)
+		return;
+
 	spin_lock(&((struct file_ll_head*)file->private_data)->spinlock);
 	write_lock(&map_wrapper.lock);
 

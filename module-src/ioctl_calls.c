@@ -1,6 +1,7 @@
 #include <linux/fs.h>
 #include "ioctl_calls.h"
-#include "buffer.h"
+#include "async_queue.h"
+#include "ioctl_calls.h"
 
 /**
  * async_setup() - Allocate a syscall buffer for the user
@@ -26,6 +27,7 @@ async_setup(void *user_argument, struct file *file_p)
 	 * `init_async_queue()`
 	 */
 
+	init_async_queue(nr_events, file_p, ctx_idp);
 }
 
 /**
@@ -66,4 +68,5 @@ async_destroy(void *user_argument, struct file *file_p)
 	 * 1. Delete any datastructures in aysnc_queue (might not need to do).
 	 * 1. Free the shared kernel-user memory ring buffer `free_buffer()`
 	 */
+	deinit_async_queue(file_p, ctx);
 }

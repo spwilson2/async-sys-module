@@ -42,23 +42,23 @@ static int
 my_open(struct inode *i, struct file *f)
 {
 	printk(KERN_INFO "Driver: open()\n");
-	// Assert we've received a file pointer from the kernel.
-	if (!f) {
-		printk(KERN_ERR "File pointer not given\n");
-		return -1;
-	}
+	//// Assert we've received a file pointer from the kernel.
+	//if (!f) {
+	//	printk(KERN_ERR "File pointer not given\n");
+	//	return -1;
+	//}
 
-	// Save the current task as the owner of the file.
-	write_lock(&f->f_owner.lock, flags);
-	if (f->f_owner.pid) {
-		printk(KERN_ERR "Pointer to file owners pid struct is already set\n");
-		write_unlock_irqrestore(&f->f_owner.lock, flags);
-		return -1;
-	}
-	f->f_owner.pid = get_task_pid(current, PIDTYPE_PID);
-	write_unlock(&f->f_owner.lock, flags);
+	//// Save the current task as the owner of the file.
+	//write_lock(&f->f_owner.lock, flags);
+	//if (f->f_owner.pid) {
+	//	printk(KERN_ERR "Pointer to file owners pid struct is already set\n");
+	//	write_unlock_irqrestore(&f->f_owner.lock, flags);
+	//	return -1;
+	//}
+	//f->f_owner.pid = get_task_pid(current, PIDTYPE_PID);
+	//write_unlock(&f->f_owner.lock, flags);
 
-	printk(KERN_INFO "\t\t open pid = %d\n", current->pid);
+	//printk(KERN_INFO "\t\t open pid = %d\n", current->pid);
 
 	/* This is actual code I want to keep now..*/
 	if (f->private_data) {
@@ -66,13 +66,14 @@ my_open(struct inode *i, struct file *f)
 		return -1;
 	}
 
-	buffer_init_file(f->private_data);
-
+	if (!init_async_queue_file(f))
+		return -1;
 	return 0;
 }
 
 static int
 my_close(struct inode *i, struct file *f) {
+	deinit_async_queue_file(f);
 	printk(KERN_INFO "Driver: close()\n");
 	return 0;
 }
@@ -110,16 +111,21 @@ my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 		return -1;
 	}
 
-	// TODO: Switch into one of our supported functions.
+	// Switch into one of our supported functions.
 	switch (cmd) {
 		case AS_SYS_SETUP:
+			async_setup(arg, f);
 			break;
 		case AS_SYS_GETEVENTS:
+			async_getevents(arg, f);
 			break;
 		case AS_SYS_DESTROY:
+			async_destroy(arg, f);
 			break;
 		default:
 			mprintk(KERN_INFO "Invalid ioctl command.\n");
+			mprintk(KERN_INFO "\t\t cmd: 0x%p\n", cmd);
+			mprintk(KERN_INFO "\t\t arg: 0x%p\n", arg);
 			return -1;
 	}
 
@@ -138,7 +144,7 @@ static struct miscdevice sample_device = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "as_sys",
 	.fops = &fops,
-	// NOTE: This could be configured with udev rules...
+	// NOTE: This could/should be configured with udev rules...
 	.mode = S_ISVTX | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH,
 };
 

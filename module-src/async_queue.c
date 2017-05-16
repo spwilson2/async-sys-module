@@ -46,10 +46,11 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	return true;
 }
 
+
 void
-deinit_async_queue(struct file *file, async_context_t *ctx_id)
+deinit_async_queue(struct file *file, async_context_t ctx_id)
 {
 	read_lock(&file->f_owner.lock);
-	free_buffer(*ctx_id, file);
+	free_buffer(ctx_id, file);
 	read_unlock(&file->f_owner.lock);
 }
