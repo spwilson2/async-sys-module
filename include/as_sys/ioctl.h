@@ -29,4 +29,18 @@ struct async_event {
 
 typedef __u64 async_context_t;
 
+struct _async_setup {
+	unsigned long nr_events;
+	async_context_t *ctx_idp;
+};
+
+struct _async_getevents {
+	async_context_t ctx;
+	long min_nr; /* If 0, we won't block, just operates as a check. */
+	long max_nr; /* If 0, will wait until timeout or all events are
+			handled */
+	struct async_event **events;
+	struct timespec *timeout;
+};
+
 #endif

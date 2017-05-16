@@ -5,6 +5,8 @@
 #include <as_sys/ioctl.h>
 #include "buffer.h"
 
+#define MAX_NR 10
+
 static inline int init_async_queue_file(struct file *file) 
 {
 	return buffer_init_file(file);

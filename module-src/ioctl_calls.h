@@ -6,6 +6,6 @@ int async_setup(void *user_argument, struct file *file_p);
 
 int async_getevents(void *user_argument, struct file *file_p);
 
-int async_destroy(void *user_argument, struct file *file_p);
+int async_destroy(unsigned long, struct file *file_p);
 
 #endif

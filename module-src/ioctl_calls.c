@@ -1,7 +1,10 @@
 #include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/stddef.h>
+
+#include <as_sys/ioctl.h>
 #include "ioctl_calls.h"
 #include "async_queue.h"
-#include "ioctl_calls.h"
 
 /**
  * async_setup() - Allocate a syscall buffer for the user
@@ -15,19 +18,29 @@
 int
 async_setup(void *user_argument, struct file *file_p)
 {
+	struct _async_setup setup_args;
+	async_context_t ctx_id;
 
-	unsigned long nr_events;
-	async_context_t *ctx_idp;
-	/*
-	 * 1. Check user_pointer is valid
-	 * 1. Ensure that the number of requested events is possible for us to
-	 * handle (less than MAX_NR).
-	 * 1. Check that the ctx_idp is valid for userspace of this program.
-	 * 1. Initilize the ctx_idp with the returned buffer id.
-	 * `init_async_queue()`
-	 */
+	if (!access_ok(VERIFY_READ, user_argument, sizeof(setup_args)))
+		return -1;
+	if (copy_from_user(&setup_args, user_argument, sizeof(setup_args)))
+		return -1;
+	if (!access_ok(VERIFY_WRITE, setup_args.ctx_idp, sizeof(*setup_args.ctx_idp)))
+		return -1;
+	if (setup_args.nr_events > MAX_NR)
+		return -1;
 
-	init_async_queue(nr_events, file_p, ctx_idp);
+	if (!init_async_queue(setup_args.nr_events, file_p, &ctx_id))
+		return -1;
+
+	/* Copy out the async_context_t if it succeeded. */
+	if (copy_to_user(setup_args.ctx_idp, &ctx_id, sizeof(ctx_id)))
+		return -1;
+	else
+		/* Copying failed, let's clean up the state we just made. */
+		deinit_async_queue(file_p, ctx_id);
+
+	return 0;
 }
 
 /**
@@ -40,33 +53,23 @@ async_setup(void *user_argument, struct file *file_p)
 int
 async_getevents(void *user_argument, struct file *file_p)
 {
-	async_context_t ctx;
-	long min_nr; /* If 0, we won't block, just operates as a check. */
-	long max_nr; /* If 0, will wait until timeout or all events are
-			handled */
-	struct async_event **events;
-	struct timespec *timeout;
+	return -1; // TODO: UNSUPPORTED
 
-	/*
-	 * 1. Check user_pointer is valid.
-	 * 1. Assert that the ctx number is a valid number for this file.
-	 * NOTE: Validate that the event pointers are valid before any event is
-	 * returned.
-	 * 1.
-	 */
+	//struct _async_getevents getevents_args;
+	//if (!access_ok(VERIFY_READ, user_argument, sizeof(getevents_args)))
+	//	return -1;
+	//if (copy_from_user(&getevents_args, user_argument, sizeof(getevents_args)))
+	//	return -1;
 }
 
 /**
  * async_destroy() - Destroys the given context cleaning up all structures
  */
 int
-async_destroy(void *user_argument, struct file *file_p)
+async_destroy(unsigned long user_argument, struct file *file_p)
 {
 	async_context_t ctx = (async_context_t)user_argument;
-	/*
-	 * 1. Validate the ctx number for this file.
-	 * 1. Delete any datastructures in aysnc_queue (might not need to do).
-	 * 1. Free the shared kernel-user memory ring buffer `free_buffer()`
-	 */
 	deinit_async_queue(file_p, ctx);
+
+	return 0;
 }
