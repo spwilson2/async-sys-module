@@ -1,3 +1,4 @@
+#include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/file.h>
 #include <linux/mutex.h>
@@ -37,6 +38,22 @@ struct map_entry {
 struct map_entry_list {
 	struct map_entry *entry;
 	struct list_head list;
+};
+
+struct file_ll_node {
+	struct map_key map_key;
+	struct list_head list;
+};
+
+struct file_ll_head {
+	struct spinlock spinlock;
+	struct list_head *list;
+};
+
+struct kernel_data {
+	struct map_entry map_entry;
+	struct file_ll_node file_ll_node;
+	char kernel_buffer[0]; // Variable length attr.
 };
 
 static inline int
@@ -136,33 +153,21 @@ int
 alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 		struct file *file, struct buffer_slab **buffer)
 {
-	/*
-	 * 1. Grab reader lock on file owner
-	 * 1. malloc size of size for the process that owns file (how do I do
-	 * this so user space has access?)
-	 * 1. Insert pointer to this space into alloc_map
-	 * 1. Grab writer lock on the linked list for allocated ids of file
-	 * 1. Insert alloc_map_key into the file->private_data queue of
-	 * allocated ids
-	 * 1. Unlock writer for file linked list
-	 * 1. Unlcok reader lock on file owner
-	 */
 
-	struct map_entry *entry;
+	struct kernel_data *kernel_data;
 
 	/* Allocate space for the map entry*/
-	entry = kmalloc(sizeof(struct map_entry) + kernel_buffer_size, GFP_KERNEL);
-	if (!entry) {
+	kernel_data = kmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
+	if (!kernel_data) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
 	}
-	entry->buffer.kernel_buffer = entry + sizeof(struct map_entry);
 
 	/* Allocate space for our shared ring buffer. */
-	entry->buffer.user_buffer = kmalloc(user_buffer_size, GFP_USER);
-	if (!entry->buffer.user_buffer) {
+	kernel_data->map_entry.buffer.user_buffer = kmalloc(user_buffer_size, GFP_USER);
+	if (!kernel_data->map_entry.buffer.user_buffer) {
 		// TODO: Need to try a vmalloc if unable to succeed.
-		kfree(entry);
+		kfree(kernel_data);
 		return false; // Failed to alloc.
 	}
 	/*
@@ -170,29 +175,35 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	 * process for the allocated buffer.
 	 */
 
-	// Initilize the lock on the new entry's buffer and grab the lock.
-	rwlock_init(&entry->buffer.rwlock);
-	write_lock(&entry->buffer.rwlock);
+	// Initilize the lock on the new map_entry's buffer and grab the lock.
+	rwlock_init(&kernel_data->map_entry.buffer.rwlock);
+	write_lock(&kernel_data->map_entry.buffer.rwlock);
 
-	/* Grab the read lock on the file so we can find the pid. And ensure
-	 * the process remains active.
-	 */
 	read_lock(&file->f_owner.lock);
-	entry->key = (struct map_key){.buffer_uid = gen_next_map_id(), .pid = pid_nr(file->f_owner.pid)};
+	kernel_data->map_entry.key = (struct map_key){.buffer_uid = gen_next_map_id(), .pid = pid_nr(file->f_owner.pid)};
+
+	/* Grab the lock on this file's list of buffer entries. */
+	spin_lock(&((struct file_ll_head*)file->private_data)->spinlock);
 
 	write_lock(&map_wrapper.lock);
-	if (!map_insert(&map_wrapper._root, entry)) {
+	read_unlock(&file->f_owner.lock);
+	if (!map_insert(&map_wrapper._root, &kernel_data->map_entry)) {
 		// There was a duplicate....?
 		write_unlock(&map_wrapper.lock);
 		read_unlock(&file->f_owner.lock);
 
-		kfree(entry->buffer.user_buffer);
-		kfree(entry);
+		kfree(kernel_data->map_entry.buffer.user_buffer);
+		kfree(kernel_data);
 		return false;
 	}
-	*buffer = &entry->buffer;
+	*buffer = &kernel_data->map_entry.buffer;
 	write_unlock(&map_wrapper.lock);
-	read_unlock(&file->f_owner.lock);
+
+	/* With the node inserted into the tree we can now insert a tag into
+	 * the file's list of active buffers.
+	 */
+	list_add(&kernel_data->file_ll_node.list, ((struct file_ll_head*)file->private_data)->list);
+	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
 
 	return true;
 }
@@ -201,12 +212,15 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
  * free_buffer() - Free the buffer of given id
  */
 void
-free_buffer(buffer_id_t id, pid_t pid)
+free_buffer(buffer_id_t id, struct file *file)
 {
 	struct map_key map_key;
 	struct map_entry *match;
+	struct kernel_data *kernel_data;
 
-	map_key = (struct map_key){.buffer_uid = id, .pid = pid};
+	read_lock(&file->f_owner.lock);
+	map_key = (struct map_key){.buffer_uid = id, .pid = pid_nr(file->f_owner.pid)};
+	read_unlock(&file->f_owner.lock);
 
 	write_lock(&map_wrapper.lock);
 	if (!(match = map_search(&map_wrapper._root, &map_key))) {
@@ -215,43 +229,24 @@ free_buffer(buffer_id_t id, pid_t pid)
 		mprintk("Called free_buffer for id '%lu' but no match found.", id);
 		return;
 	}
+
+	kernel_data = container_of(match, struct kernel_data, map_entry);
+	spin_lock(&((struct file_ll_head*)file->private_data)->spinlock);
+
 	/* Note: The following order matters! */
 	/* Grab lock and never free since we free it */
 	write_lock(&match->buffer.rwlock);
 
 	/* Remove the mapping from the tree. */
 	rb_erase(&match->node, &map_wrapper._root);
+	/* Remove this linked list node from the list. */
+	list_del(&kernel_data->file_ll_node.list);
 	/* We can now unlock the tree since there is no way to find the buffer */
 	write_unlock(&map_wrapper.lock);
+	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
 
 	kfree(match->buffer.user_buffer);
-	kfree(match);
-}
-
-void
-free_buffer_slab(struct buffer_slab *buffer_slab)
-{
-	/*
-	 * NOTE: Could try this container_of trick, but would make a race
-	 * condition if the buffer_slab were removed formt the tree but not
-	 * freed.
-	struct map_entry *entry = container_of(buffer_slab, struct map_entry, buffer);
-
-	write_lock(&map_wrapper.lock);
-	// Remove the mapping from the tree.
-	//rb_erase(&entry->node, &map_wrapper._root);
-	//write_unlock(&map_wrapper.lock);
-
-	// Grab lock and never free since we free it.
-	//
-	// FIXME: Need to solve problem of those trying to grab lock after we
-	// free.
-	//
-	write_lock(entry->buffer.rwlock);
-	kfree(match->buffer.user_buffer);
-	kfree(match);
-	*/
-	free_buffer(buffer_slab->key.buffer_uid, buffer_slab->key.pid);
+	kfree(kernel_data);
 }
 
 /* Get the buffer from the map. */
@@ -270,5 +265,25 @@ get_buffer(buffer_id_t id, pid_t pid, struct buffer_slab **buffer) {
 	/* Hand-over-hand lock must be done. */
 	read_lock(&match->buffer.rwlock);
 	read_unlock(&map_wrapper.lock);
+	return true;
+}
+
+int
+buffer_init_file(struct file *file)
+{
+	struct file_ll_head* new_ll;
+	void * volatile*private_data = &file->private_data;
+
+	if (!(new_ll = kmalloc(sizeof(struct file_ll_head), GFP_KERNEL)))
+		return false;
+
+	new_ll->list = NULL;
+	spin_lock_init(&new_ll->spinlock);
+
+	/*
+	 * This must occur after the spin_lock_init hence the volatile decl
+	 * above.
+	 */
+	*private_data = new_ll;
 	return true;
 }

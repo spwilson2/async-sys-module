@@ -32,6 +32,10 @@ struct buffer_slab {
 	struct map_key key;
 };
 
+/* Initilize the file's private_data for use in this module. */
+int 
+buffer_init_file(struct file *file);
+
 /* Allocate a buffer for a given file. */
 int alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size, 
 		struct file *file, struct buffer_slab **buffer);
@@ -40,7 +44,9 @@ int alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 int get_buffer(buffer_id_t id, pid_t pid, struct buffer_slab **buffer);
 
 /* Free the buffer for the given id. */
-void free_buffer(buffer_id_t id, pid_t pid);
-void free_buffer_slab(struct buffer_slab *buffer_slab);
+void free_buffer(buffer_id_t id, struct file *file);
+
+/* Free all of the given file's buffers. */
+void free_files_buffers(struct file *file);
 
 #endif
