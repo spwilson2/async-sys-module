@@ -52,7 +52,7 @@ struct file_ll_node {
 
 struct file_ll_head {
 	struct spinlock spinlock;
-	struct list_head *list;
+	struct list_head list;
 };
 
 struct kernel_data {
@@ -207,7 +207,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	/* With the node inserted into the tree we can now insert a tag into
 	 * the file's list of active buffers.
 	 */
-	list_add(&kernel_data->file_ll_node.list, ((struct file_ll_head*)file->private_data)->list);
+	list_add(&kernel_data->file_ll_node.list, &((struct file_ll_head*)file->private_data)->list);
 	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
 
 	return true;
@@ -282,7 +282,7 @@ buffer_init_file(struct file *file)
 	if (!(new_ll = kmalloc(sizeof(struct file_ll_head), GFP_KERNEL)))
 		return false;
 
-	new_ll->list = NULL;
+	INIT_LIST_HEAD(&new_ll->list);
 	spin_lock_init(&new_ll->spinlock);
 
 	/*
@@ -317,7 +317,7 @@ buffer_free_file(struct file *file)
 	 */
 	list_for_each_entry_safe(cur_node,
 				 next_node,
-				 ((struct file_ll_head*)file->private_data)->list,
+				 &((struct file_ll_head*)file->private_data)->list,
 				 list) {
 
 		kernel_data = container_of(cur_node, struct kernel_data, file_ll_node);
