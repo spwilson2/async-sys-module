@@ -1,13 +1,9 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
-*
-* This file is released under the GPLv2
-*/
-/*
-* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
-*
-* This file is released under the GPLv2
-*/
+ * Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
+ *
+ * This file is released under the GPLv2
+ */
+
 #ifndef __Module_SRC_ASYNC_QUEUE_H
 #define __Module_SRC_ASYNC_QUEUE_H
 

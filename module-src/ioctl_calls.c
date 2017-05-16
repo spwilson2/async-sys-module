@@ -1,8 +1,9 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
-*
-* This file is released under the GPLv2
-*/
+ * Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
+ *
+ * This file is released under the GPLv2
+ */
+
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/stddef.h>
@@ -10,6 +11,7 @@
 #include <as_sys/ioctl.h>
 #include "ioctl_calls.h"
 #include "async_queue.h"
+#include "common.h"
 
 /**
  * async_setup() - Allocate a syscall buffer for the user

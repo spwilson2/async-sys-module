@@ -1,20 +1,17 @@
 CC:=gcc
 CFLAGS += -std=gnu99 -ggdb -O2
 
-TARGETS := libcircle-buffer.a
+TARGETS := libcircle_buffer.a
 
 .PHONY: all clean
 all: $(TARGETS)
 
-libcircle-buffer.a: circle-buffer.o
+libcircle_buffer.a: circle_buffer.o
 	ar rcs $@ $^
 	rm $^
 
-lib%.a: %.o
-	ar rcs $@ $<
-
 .PHONY: test
-test: libcircle-buffer.a
+test: libcircle_buffer.a
 	$(MAKE) -C $(PWD)/test test
 
 clean: 

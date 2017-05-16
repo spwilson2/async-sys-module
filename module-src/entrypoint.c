@@ -1,8 +1,8 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
-*
-* This file is released under the GPLv2
-*/
+ * Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
+ *
+ * This file is released under the GPLv2
+ */
 
 #include <linux/init.h>
 #include <linux/module.h>	/* Needed by all modules */

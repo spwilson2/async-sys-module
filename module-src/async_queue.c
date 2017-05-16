@@ -1,8 +1,9 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
-*
-* This file is released under the GPLv2
-*/
+ * Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
+ *
+ * This file is released under the GPLv2
+ */
+
 #include <linux/fs.h>
 #include <linux/stddef.h>
 #include <linux/rwlock.h>
@@ -11,7 +12,8 @@
 
 #include "buffer.h"
 #include "async_queue.h"
-#include "../shared-libs/circle-buffer.h"
+#include "shared_libs/circle_buffer.h"
+#include "common.h"
 
 #define QUEUE_SIZE(events) sizeof(circle_buffer) + sizeof(struct async_cb)*events
 
@@ -40,7 +42,6 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	queue_metadata = buffer_slab->kernel_buffer;
 	queue_metadata->nr_events = nr_events;
 	queue_metadata->syscall_queue = buffer_slab->user_buffer;
-
 	init_buffer((circle_buffer*)&queue_metadata->syscall_queue, sizeof(struct async_cb), nr_events);
 
 	*ctx_id = buffer_slab->key.buffer_uid;
@@ -50,7 +51,6 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	write_unlock(&buffer_slab->rwlock);
 	return true;
 }
-
 
 void
 deinit_async_queue(struct file *file, async_context_t ctx_id)
