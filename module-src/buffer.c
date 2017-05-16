@@ -226,7 +226,7 @@ free_buffer(buffer_id_t id, struct file *file)
 	if (!(match = map_search(&map_wrapper._root, &map_key))) {
 		// No match found
 		write_unlock(&map_wrapper.lock);
-		mprintk("Called free_buffer for id '%lu' but no match found.", id);
+		mpr_err("Called free_buffer for id '%lu' but no match found.", id);
 		return;
 	}
 

@@ -1,4 +1,5 @@
 
+#include <linux/init.h>
 #include <linux/module.h>	/* Needed by all modules */
 #include <linux/kernel.h>	/* Needed for KERN_INFO */
 #include <linux/fs.h>
@@ -6,15 +7,17 @@
 #include <linux/pid.h>
 #include <linux/syscalls.h>
 #include <linux/sched.h>
+#include <linux/device.h>
 
 #include <asm/uaccess.h>
 
 #include <as_sys/ioctl.h>
+#include "async_queue.h"
 #include "ioctl_calls.h"
 #include "common.h"
 
 static void *sys_call_table;
-
+static struct miscdevice sample_device;
 /* Wrap the given callback syscall with memory space fixings so syscall check for correct
  * address space passes.
  */
@@ -37,29 +40,30 @@ static void *sys_call_table;
 static int
 my_open(struct inode *i, struct file *f)
 {
-	mprintk(KERN_INFO "Driver: open()\n");
+	mpr_info("Driver: open()\n");
 	//// Assert we've received a file pointer from the kernel.
 	if (!f) {
-		printk(KERN_ERR "File pointer not given\n");
+		mpr_err("File pointer not given\n");
 		return -1;
 	}
 
 	// Save the current task as the owner of the file.
-	write_lock(&f->f_owner.lock, flags);
+	write_lock(&f->f_owner.lock);
 	if (f->f_owner.pid) {
-		mprintk(KERN_ERR "Pointer to file owners pid struct is already set\n");
-		write_unlock_irqrestore(&f->f_owner.lock, flags);
+		mpr_err("Pointer to file owners pid struct is already set\n");
+		write_unlock(&f->f_owner.lock);
 		return -1;
 	}
 	f->f_owner.pid = get_task_pid(current, PIDTYPE_PID);
-	write_unlock(&f->f_owner.lock, flags);
+	write_unlock(&f->f_owner.lock);
 
-	mprintk(KERN_INFO "\t\t open pid = %d\n", current->pid);
+	mpr_info("\t\t open pid = %d\n", current->pid);
 
 	/* This is actual code I want to keep now..*/
 	if (f->private_data) {
-		mprintk(KERN_ERR "Why is private_data init on new file?\n");
-		return -1;
+		mpr_info("Why is private_data init on new file?\n");
+		mpr_info("\t\t %p\n", f->private_data);
+		f->private_data = 0;
 	}
 
 	if (!init_async_queue_file(f))
@@ -69,8 +73,8 @@ my_open(struct inode *i, struct file *f)
 
 static int
 my_close(struct inode *i, struct file *f) {
+	mpr_info("Driver: close()\n");
 	deinit_async_queue_file(f);
-	printk(KERN_INFO "Driver: close()\n");
 	return 0;
 }
 
@@ -81,20 +85,20 @@ my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 
 	   read_lock_irqsave(&f->f_owner.lock, flags);
 	   if (!f->f_owner.pid) {
-	   printk(KERN_ERR "Driver: ioctl called on file without pid owner set!!\n");
+	   mpr_info("Driver: ioctl called on file without pid owner set!!\n");
 	   read_unlock_irqrestore(&f->f_owner.lock, flags);
 	   return -1;
 	   }
-	   printk(KERN_INFO "Driver: ioctl(%u, %lu)\n", cmd, arg);
-	   printk(KERN_INFO "\t\t ioctl pid: %d\n", pid_nr(f->f_owner.pid));
+	   mpr_info("Driver: ioctl(%u, %lu)\n", cmd, arg);
+	   mpr_info("\t\t ioctl pid: %d\n", pid_nr(f->f_owner.pid));
 	   read_unlock_irqrestore(&f->f_owner.lock, flags);
 
 	// Call the argd'th syscall
-	printk(KERN_INFO "sys_call_table: %p\n", sys_call_table);
+	mpr_info("sys_call_table: %p\n", sys_call_table);
 	void (**sys_call_addr)(void);
 	sys_call_addr = sys_call_table + arg * sizeof(void*);
-	printk(KERN_INFO "sys_call_table entry address: %p\n", sys_call_addr);
-	printk(KERN_INFO "sys_call address: %p\n", *sys_call_addr);
+	mpr_info("sys_call_table entry address: %p\n", sys_call_addr);
+	mpr_info("sys_call address: %p\n", *sys_call_addr);
 
 	// Doesn't seem that the address space change is necessary.
 	//wrap_syscall(*sys_call_addr);
@@ -103,25 +107,25 @@ my_ioctl(struct file *f, unsigned int cmd, unsigned long arg) {
 
 	// Ensure the magic header is intact.
 	if (_IOC_TYPE(cmd) != AS_SYS_MAGIC) {
-		mprintk(KERN_INFO "Invalid Magic Header provided.\n");
+		mpr_info("Invalid Magic Header provided.\n");
 		return -1;
 	}
 
 	// Switch into one of our supported functions.
 	switch (cmd) {
 		case AS_SYS_SETUP:
-			return async_setup(arg, f);
+			return async_setup((void*)arg, f);
 			break;
 		case AS_SYS_GETEVENTS:
-			return async_getevents(arg, f);
+			return async_getevents((void*)arg, f);
 			break;
 		case AS_SYS_DESTROY:
 			return async_destroy(arg, f);
 			break;
 		default:
-			mprintk(KERN_INFO "Invalid ioctl command.\n");
-			mprintk(KERN_INFO "\t\t cmd: 0x%p\n", cmd);
-			mprintk(KERN_INFO "\t\t arg: 0x%p\n", arg);
+			mpr_info("Invalid ioctl command.\n");
+			mpr_info("\t\t cmd: 0x%x\n", cmd);
+			mpr_info("\t\t arg: 0x%lx\n", arg);
 			return -1;
 	}
 }
@@ -134,7 +138,7 @@ static struct file_operations fops = {
 	.unlocked_ioctl = my_ioctl,
 };
 
-static struct miscdevice sample_device = {
+static struct miscdevice sample_device= {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "as_sys",
 	.fops = &fops,
@@ -144,23 +148,23 @@ static struct miscdevice sample_device = {
 
 static int __init as_sys_init_module(void)
 {
+	int error;
 	/*
 	 * Create a special device so that people can use that device to
 	 * communicate with this module.
 	 */
 
-	int error;
 	if ((error = misc_register(&sample_device))) {
-		pr_err("can't misc_register :(\n");
+		mpr_err("can't misc_register :(\n");
 		return error;
 	}
 
 	sys_call_table = (void*) kallsyms_lookup_name("sys_call_table");
-	printk(KERN_DEBUG "sys_call_table addr: %p\n", sys_call_table);
+	mpr_info("sys_call_table addr: %p\n", sys_call_table);
 
 	sample_device.mode = S_IROTH | S_IWOTH;
 
-	printk(KERN_INFO "Async-sys initilized\n");
+	mpr_info("Async-sys initilized\n");
 
 	/*
 	 * A non 0 return means init_module failed; module can't be loaded.
@@ -171,7 +175,7 @@ static int __init as_sys_init_module(void)
 static void __exit as_sys_cleanup_module(void)
 {
 	misc_deregister(&sample_device);
-	printk(KERN_INFO "Async-sys closing\n");
+	mpr_info("Async-sys closing\n");
 }
 
 module_init(as_sys_init_module);
