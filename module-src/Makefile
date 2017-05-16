@@ -7,7 +7,7 @@ include Kbuild
 else
 KDIR ?= /lib/modules/`uname -r`/build
 
-default:
+default: 
 	$(MAKE) -C $(KDIR) M=$$PWD
 
 clean:

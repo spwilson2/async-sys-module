@@ -11,7 +11,7 @@
 
 #include "buffer.h"
 #include "async_queue.h"
-#include "circle_buffer.h"
+#include "shared_libs/circle_buffer.h"
 #include "common.h"
 
 #define QUEUE_SIZE(events) sizeof(circle_buffer) + sizeof(struct async_cb)*events
