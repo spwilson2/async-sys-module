@@ -10,6 +10,7 @@
 #include <as_sys/ioctl.h>
 #include "ioctl_calls.h"
 #include "async_queue.h"
+#include "common.h"
 
 /**
  * async_setup() - Allocate a syscall buffer for the user
@@ -26,6 +27,7 @@ async_setup(void *user_argument, struct file *file_p)
 	struct _async_setup setup_args;
 	async_context_t ctx_id;
 
+	mpr_info("In async_setup 1\n");
 	if (!access_ok(VERIFY_READ, user_argument, sizeof(setup_args)))
 		return -1;
 	if (copy_from_user(&setup_args, user_argument, sizeof(setup_args)))
@@ -34,16 +36,21 @@ async_setup(void *user_argument, struct file *file_p)
 		return -1;
 	if (setup_args.nr_events > MAX_NR)
 		return -1;
+	mpr_info("In async_setup 2\n");
 
 	if (!init_async_queue(setup_args.nr_events, file_p, &ctx_id))
 		return -1;
+	mpr_info("In async_setup 3\n");
 
 	/* Copy out the async_context_t if it succeeded. */
 	if (copy_to_user(setup_args.ctx_idp, &ctx_id, sizeof(ctx_id)))
 		return -1;
-	else
+	else {
 		/* Copying failed, let's clean up the state we just made. */
 		deinit_async_queue(file_p, ctx_id);
+	mpr_info("In async_setup 5\n");
+	}
+	mpr_info("In async_setup 6\n");
 
 	return 0;
 }

@@ -1,3 +1,3 @@
 ccflags-y += -I$(src)/../include -I$(src)/include -D_LINUX_
 obj-m := as_sys.o 
-as_sys-y := entrypoint.o ioctl_calls.o buffer.o async_queue.o
+as_sys-y := entrypoint.o ioctl_calls.o buffer.o async_queue.o circle_buffer.o

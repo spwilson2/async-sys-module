@@ -1,6 +1,6 @@
 #ifndef __MUTEX_H__
 #define __MUTEX_H__
-#include "asm-primitives.h"
+#include "asm_primitives.h"
 #include <assert.h>
 
 #define LOCKED 1

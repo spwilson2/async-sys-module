@@ -1,5 +1,5 @@
-#ifndef __CIRCLE_BUFFER_H__
-#define __CIRCLE_BUFFER_H__
+#ifndef __SHARED_LIBS_CIRCLE_BUFFER_H
+#define __SHARED_LIBS_CIRCLE_BUFFER_H
 
 // Can't include stdlib.h
 #include <stddef.h>

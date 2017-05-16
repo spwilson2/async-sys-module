@@ -11,7 +11,8 @@
 
 #include "buffer.h"
 #include "async_queue.h"
-#include "../shared-libs/circle-buffer.h"
+#include "circle_buffer.h"
+#include "common.h"
 
 #define QUEUE_SIZE(events) sizeof(circle_buffer) + sizeof(struct async_cb)*events
 
@@ -30,17 +31,20 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	struct buffer_slab *buffer_slab;
 	struct queue_metadata *queue_metadata;
 
+	mpr_info("In int_async_queue 1\n");
 	/* First try creating the buffer region for us to store the queue. */
 	/* NOTE: We should be given the buffer_slab holding its lock. */
 	if (!alloc_buffer(QUEUE_SIZE(nr_events), sizeof(struct queue_metadata),
 				file, &buffer_slab))
 		return false;
 
+	mpr_info("In int_async_queue 2\n");
 	/* Fill in the metadata head of the queue. */
 	queue_metadata = buffer_slab->kernel_buffer;
 	queue_metadata->nr_events = nr_events;
 	queue_metadata->syscall_queue = buffer_slab->user_buffer;
 
+	mpr_info("In int_async_queue 3\n");
 	init_buffer((circle_buffer*)&queue_metadata->syscall_queue, sizeof(struct async_cb), nr_events);
 
 	*ctx_id = buffer_slab->key.buffer_uid;
@@ -48,6 +52,7 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	 * its lock.
 	 */
 	write_unlock(&buffer_slab->rwlock);
+	mpr_info("In int_async_queue 4\n");
 	return true;
 }
 
