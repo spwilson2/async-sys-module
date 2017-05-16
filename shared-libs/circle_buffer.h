@@ -11,14 +11,14 @@
 #endif
 
 typedef struct __circle_buffer {
-    size_t data_size;
-    size_t size;
+	size_t data_size;
+	size_t size;
 
-    struct mutex tail_lock;
-    volatile size_t tail_idx; /* The start for the producer to place data. */
-    volatile size_t head_idx; /* The beginning of a consumer list */
+	struct mutex tail_lock;
+	volatile size_t tail_idx; /* The start for the producer to place data. */
+	volatile size_t head_idx; /* The beginning of a consumer list */
 
-    char buffer[0]; /* The first address of the circular buffer. Variable length.*/
+	char buffer[0]; /* The first address of the circular buffer. Variable length.*/
 } circle_buffer;
 
 

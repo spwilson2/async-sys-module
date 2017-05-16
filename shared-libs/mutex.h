@@ -7,23 +7,23 @@
 #define UNLOCKED 0
 
 struct mutex {
-    volatile unsigned int locked;
+	volatile unsigned int locked;
 };
 
 static inline void mutex_init(struct mutex *lock) {
-    assert(lock);
-    lock->locked = UNLOCKED;
+	assert(lock);
+	lock->locked = UNLOCKED;
 }
 
 static inline void mutex_lock(struct mutex *lock) {
-    assert(lock);
-    while (__sync_lock_test_and_set(&lock->locked, LOCKED) != UNLOCKED)
-        __asm_pause();
+	assert(lock);
+	while (__sync_lock_test_and_set(&lock->locked, LOCKED) != UNLOCKED)
+		__asm_pause();
 }
 
 static inline void mutex_unlock(struct mutex *lock) {
-    assert(lock);
-    lock->locked = UNLOCKED;
+	assert(lock);
+	lock->locked = UNLOCKED;
 }
 
 #endif
