@@ -163,7 +163,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 
 	mpr_info("In alloc_buffer 1\n");
 	/* Allocate space for the map entry*/
-	kernel_data = kmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
+	kernel_data = dkmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
 	mpr_info("kernel_data %p \n", kernel_data);
 	if (!kernel_data) {
 		// TODO: Need to try a vmalloc if unable to succeed.
@@ -172,10 +172,10 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	kernel_data->map_entry.buffer.kernel_buffer = &kernel_data->kernel_buffer;
 
 	/* Allocate space for our shared ring buffer. */
-	kernel_data->map_entry.buffer.user_buffer = kmalloc(user_buffer_size, GFP_USER);
+	kernel_data->map_entry.buffer.user_buffer = dkmalloc(user_buffer_size, GFP_USER);
 	if (!kernel_data->map_entry.buffer.user_buffer) {
 		// TODO: Need to try a vmalloc if unable to succeed.
-		kfree(kernel_data);
+		dkfree(kernel_data);
 		return false; // Failed to alloc.
 	}
 	/*
@@ -203,8 +203,8 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 		write_unlock(&map_wrapper.lock);
 		read_unlock(&file->f_owner.lock);
 
-		kfree(kernel_data->map_entry.buffer.user_buffer);
-		kfree(kernel_data);
+		dkfree(kernel_data->map_entry.buffer.user_buffer);
+		dkfree(kernel_data);
 		return false;
 	}
 	mpr_info("In alloc_buffer 4.5\n");
@@ -258,8 +258,8 @@ free_buffer(buffer_id_t id, struct file *file)
 	write_unlock(&map_wrapper.lock);
 	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
 
-	kfree(match->buffer.user_buffer);
-	kfree(kernel_data);
+	dkfree(match->buffer.user_buffer);
+	dkfree(kernel_data);
 }
 
 /* Get the buffer from the map. */
@@ -287,7 +287,7 @@ buffer_init_file(struct file *file)
 	struct file_ll_head* new_ll;
 	void * volatile*private_data = &file->private_data;
 
-	if (!(new_ll = kmalloc(sizeof(struct file_ll_head), GFP_KERNEL)))
+	if (!(new_ll = dkmalloc(sizeof(struct file_ll_head), GFP_KERNEL)))
 		return false;
 
 	INIT_LIST_HEAD(&new_ll->list);
@@ -335,8 +335,8 @@ buffer_free_file(struct file *file)
 		rb_erase(&kernel_data->map_entry.node, &map_wrapper._root);
 		/* Remove this linked list node from the list. */
 		list_del(&kernel_data->file_ll_node.list);
-		kfree(kernel_data->map_entry.buffer.user_buffer);
-		kfree(kernel_data);
+		dkfree(kernel_data->map_entry.buffer.user_buffer);
+		dkfree(kernel_data);
 	}
 	write_unlock(&map_wrapper.lock);
 	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
