@@ -27,12 +27,6 @@ static inline buffer_id_t gen_next_map_id(void)
 	return map_wrapper._uid_counter++;
 }
 
-struct map_key {
-	/* Both make up the key, <pid, buffer_uid> -> buffer. */
-	pid_t pid;
-	buffer_id_t buffer_uid;
-};
-
 struct map_entry {
 	struct rb_node node;
 	struct map_key key;
@@ -139,7 +133,8 @@ map_insert(struct rb_root *root, struct map_entry *data)
  *
  */
 int
-alloc_buffer(size_t size, struct file *file, struct buffer_slab **buffer)
+alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
+		struct file *file, struct buffer_slab **buffer)
 {
 	/*
 	 * 1. Grab reader lock on file owner
@@ -156,50 +151,54 @@ alloc_buffer(size_t size, struct file *file, struct buffer_slab **buffer)
 	struct map_entry *entry;
 
 	/* Allocate space for the map entry*/
-	entry = kmalloc(sizeof(struct map_entry), GFP_KERNEL);
+	entry = kmalloc(sizeof(struct map_entry) + kernel_buffer_size, GFP_KERNEL);
 	if (!entry) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
 	}
+	entry->buffer.kernel_buffer = entry + sizeof(struct map_entry);
 
-
-	/*
-	 * TODO: Need to set up the address space boundaries for the correct
-	 * process.
-	 */
 	/* Allocate space for our shared ring buffer. */
-	entry->buffer.buffer = kmalloc(size, GFP_USER);
-	if (!entry->buffer.buffer) {
+	entry->buffer.user_buffer = kmalloc(user_buffer_size, GFP_USER);
+	if (!entry->buffer.user_buffer) {
 		// TODO: Need to try a vmalloc if unable to succeed.
+		kfree(entry);
 		return false; // Failed to alloc.
 	}
+	/*
+	 * TODO: Need to set up the address space boundaries for the correct
+	 * process for the allocated buffer.
+	 */
 
 	// Initilize the lock on the new entry's buffer and grab the lock.
-	spin_lock_init(&entry->buffer.spinlock);
-	spin_lock(&entry->buffer.spinlock);
+	rwlock_init(&entry->buffer.rwlock);
+	write_lock(&entry->buffer.rwlock);
 
-	/* Grab the read lock on the file so we can find the pid. */
+	/* Grab the read lock on the file so we can find the pid. And ensure
+	 * the process remains active.
+	 */
 	read_lock(&file->f_owner.lock);
 	entry->key = (struct map_key){.buffer_uid = gen_next_map_id(), .pid = pid_nr(file->f_owner.pid)};
-	read_unlock(&file->f_owner.lock);
 
 	write_lock(&map_wrapper.lock);
 	if (!map_insert(&map_wrapper._root, entry)) {
 		// There was a duplicate....?
 		write_unlock(&map_wrapper.lock);
+		read_unlock(&file->f_owner.lock);
 
-		kfree(entry->buffer.buffer);
+		kfree(entry->buffer.user_buffer);
 		kfree(entry);
 		return false;
 	}
 	/*
-	 * We are holding the spinlock on the buffer so it cannnot be freed.
+	 * We are holding the writer lock on the buffer so it cannnot be freed.
 	 * TODO: At some point could move to a mutex, although I think it would
 	 * be rare that we want to delete a buffer as we are also allocating
 	 * one.
 	 */
 	*buffer = &entry->buffer;
 	write_unlock(&map_wrapper.lock);
+	read_unlock(&file->f_owner.lock);
 
 	return true;
 }
@@ -208,22 +207,75 @@ alloc_buffer(size_t size, struct file *file, struct buffer_slab **buffer)
  * free_buffer() - Free the buffer of given id
  */
 void
-free_buffer(buffer_id_t id, struct file *file)
+free_buffer(buffer_id_t id, pid_t pid)
 {
-	struct map_entry entry;
+	struct map_key map_key;
 	struct map_entry *match;
 
-	read_lock(&file->f_owner.lock);
-	entry.key = (struct map_key){.buffer_uid = id, .pid = pid_nr(file->f_owner.pid)};
-	read_unlock(&file->f_owner.lock);
+	map_key = (struct map_key){.buffer_uid = id, .pid = pid};
 
 	write_lock(&map_wrapper.lock);
-	if (!(match = map_search(&map_wrapper._root, &entry.key))) {
+	if (!(match = map_search(&map_wrapper._root, &map_key))) {
 		// No match found
 		write_unlock(&map_wrapper.lock);
 		mprintk("Called free_buffer for id '%lu' but no match found.", id);
+		return;
 	}
+	/* Remove the mapping from the tree. */
 	rb_erase(&match->node, &map_wrapper._root);
-
 	write_unlock(&map_wrapper.lock);
+
+	/* Grab lock and never free since we free it. */
+	/*
+	 * FIXME: Need to solve problem of those trying to grab lock after we
+	 * free.
+	 */
+	write_lock(&match->buffer.rwlock);
+	kfree(match->buffer.user_buffer);
+	kfree(match);
+
+}
+
+void
+free_buffer_slab(struct buffer_slab *buffer_slab)
+{
+	/*
+	 * NOTE: Could try this container_of trick, but would make a race
+	 * condition if the buffer_slab were removed formt the tree but not
+	 * freed.
+	struct map_entry *entry = container_of(buffer_slab, struct map_entry, buffer);
+
+	write_lock(&map_wrapper.lock);
+	// Remove the mapping from the tree.
+	//rb_erase(&entry->node, &map_wrapper._root);
+	//write_unlock(&map_wrapper.lock);
+
+	// Grab lock and never free since we free it.
+	//
+	// FIXME: Need to solve problem of those trying to grab lock after we
+	// free.
+	//
+	write_lock(entry->buffer.rwlock);
+	kfree(match->buffer.user_buffer);
+	kfree(match);
+	*/
+	free_buffer(buffer_slab->key.buffer_uid, buffer_slab->key.pid);
+}
+
+/* Get the buffer from the map. */
+int
+get_buffer(buffer_id_t id, pid_t pid, struct buffer_slab **buffer) {
+	struct map_key map_key = (struct map_key){.buffer_uid = id, .pid = pid};
+	struct map_entry *match;
+
+	read_lock(&map_wrapper.lock);
+	if (!(match = map_search(&map_wrapper._root, &map_key))) {
+		// No match found
+		read_unlock(&map_wrapper.lock);
+		return false;
+	}
+	*buffer = &match->buffer;
+	read_lock(&match->buffer.rwlock);
+	read_unlock(&map_wrapper.lock);
+	return true;
 }

@@ -16,14 +16,15 @@
 #define AS_SYS_DESTROY   _IOW(AS_SYS_MAGIC,  3, unsigned int)
 
 struct async_cb {
-    long number; /* The syscall number. */
-    void * vargs[]; /* NULL terminated list of arguments to the syscall of given number. */
+	long number; /* The syscall number. */
+	void * vargs[]; /* NULL terminated list of arguments to the syscall of given number. */
 };
 
 /* Used to store information about results. */
 struct async_event {
-    struct async_cb* cbp; /* Pointer to the async_cb where event came from. */
-    __s64 res; /* Result of syscall. */
+	struct async_cb* cbp; /* Pointer to the async_cb where event came from. */
+	__s64 res; /* Result of syscall. */
+	// TODO: Might want other info like status code.
 };
 
 typedef __u64 async_context_t;
