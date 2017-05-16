@@ -23,7 +23,7 @@ typedef struct __circle_buffer {
 } circle_buffer;
 
 
-void init_buffer(circle_buffer* buf, size_t data_size, size_t enteries);
+void init_buffer(circle_buffer* buf, size_t data_size, size_t entries);
 void deinit_buffer(circle_buffer *buf);
 
 /* Insert the given `void *` into the circular_buffer, may block if no space.. */

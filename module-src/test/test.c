@@ -16,7 +16,7 @@ int main(void) {
 		printf("FAILED TO FIND FILE\n");
 	}
 	printf("fd: %d\n", fd);
-	if (fd) {
+	if (fd > 0) {
 		ioctl(fd, _IOWR(SYS_exit,2,sizeof(int)), (int)SYS_exit, (int)33);
 		printf("Didn't exit...\n");
 	} else {
