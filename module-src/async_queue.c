@@ -49,11 +49,7 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 void
 deinit_async_queue(struct file *file, async_context_t *ctx_id)
 {
-	struct buffer_slab *buffer_slab;
 	read_lock(&file->f_owner.lock);
-	if (!get_buffer(*ctx_id, pid_nr(file->f_owner.pid), &buffer_slab))
-		return;
-
-	free_buffer_slab(buffer_slab);
+	free_buffer(*ctx_id, pid_nr(file->f_owner.pid));
 	read_unlock(&file->f_owner.lock);
 }

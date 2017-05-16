@@ -21,8 +21,10 @@ struct buffer_slab {
 	 * buffer slab but read is used to be able read/modify the internals 
 	 * of the user_buffer and kernel_buffer.
 	 *
-	 * TODO/FIXME: Need to solve the issue of trying to grab read
-	 * permission on lock from a freed buffer_slab.
+	 * We solve the problem which could occur with a dynamically allocated
+	 * lock (We lock a freed lock thinking it's still valid) by using
+	 * hand-over-hand locking. The map_wrapper will act as a short time BFL
+	 * to block other readers from being able to get to this on deletion.
 	 */
 	rwlock_t rwlock;
 	void *user_buffer;

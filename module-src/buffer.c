@@ -190,12 +190,6 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 		kfree(entry);
 		return false;
 	}
-	/*
-	 * We are holding the writer lock on the buffer so it cannnot be freed.
-	 * TODO: At some point could move to a mutex, although I think it would
-	 * be rare that we want to delete a buffer as we are also allocating
-	 * one.
-	 */
 	*buffer = &entry->buffer;
 	write_unlock(&map_wrapper.lock);
 	read_unlock(&file->f_owner.lock);
@@ -221,19 +215,17 @@ free_buffer(buffer_id_t id, pid_t pid)
 		mprintk("Called free_buffer for id '%lu' but no match found.", id);
 		return;
 	}
+	/* Note: The following order matters! */
+	/* Grab lock and never free since we free it */
+	write_lock(&match->buffer.rwlock);
+
 	/* Remove the mapping from the tree. */
 	rb_erase(&match->node, &map_wrapper._root);
+	/* We can now unlock the tree since there is no way to find the buffer */
 	write_unlock(&map_wrapper.lock);
 
-	/* Grab lock and never free since we free it. */
-	/*
-	 * FIXME: Need to solve problem of those trying to grab lock after we
-	 * free.
-	 */
-	write_lock(&match->buffer.rwlock);
 	kfree(match->buffer.user_buffer);
 	kfree(match);
-
 }
 
 void
@@ -275,6 +267,7 @@ get_buffer(buffer_id_t id, pid_t pid, struct buffer_slab **buffer) {
 		return false;
 	}
 	*buffer = &match->buffer;
+	/* Hand-over-hand lock must be done. */
 	read_lock(&match->buffer.rwlock);
 	read_unlock(&map_wrapper.lock);
 	return true;
