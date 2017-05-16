@@ -136,8 +136,8 @@ See [](http://www.makelinux.net/ldd3/) for help.
 
 Sean Wilson <spwilson2@wisc.edu>
 
-This project follows up on previous work to improve filesystem performance in
-Go by myself and @Ricky54326.
+This project follows up on [previous work](https://github.com/spwilson2/cs758-project) to improve filesystem performance in
+Go.
 
 This project is also heavily inspired by
 [FlexSC](http://www.cs.cmu.edu/~chensm/Big_Data_reading_group/papers/flexsc-osdi10.pdf)
