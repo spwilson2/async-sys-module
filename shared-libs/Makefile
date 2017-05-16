@@ -10,11 +10,6 @@ libcircle_buffer.a: circle_buffer.o
 	ar rcs $@ $^
 	rm $^
 
-linux_libcircle_buffer.a: CFLAGS+=-D_LINUX_
-linux_libcircle_buffer.a: circle_buffer.o
-	ar rcs $@ $^
-	rm $^
-
 .PHONY: test
 test: libcircle_buffer.a
 	$(MAKE) -C $(PWD)/test test

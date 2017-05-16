@@ -41,7 +41,11 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	mpr_info("In int_async_queue 2\n");
 	/* Fill in the metadata head of the queue. */
 	queue_metadata = buffer_slab->kernel_buffer;
+	mpr_info("kernel_buffer: %p\n", buffer_slab->kernel_buffer);
+
+	mpr_info("In int_async_queue 2.1\n");
 	queue_metadata->nr_events = nr_events;
+	mpr_info("In int_async_queue 2.2\n");
 	queue_metadata->syscall_queue = buffer_slab->user_buffer;
 
 	mpr_info("In int_async_queue 3\n");

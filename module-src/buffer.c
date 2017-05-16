@@ -164,10 +164,12 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	mpr_info("In alloc_buffer 1\n");
 	/* Allocate space for the map entry*/
 	kernel_data = kmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
+	mpr_info("kernel_data %p \n", kernel_data);
 	if (!kernel_data) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
 	}
+	kernel_data->map_entry.buffer.kernel_buffer = &kernel_data->kernel_buffer;
 
 	/* Allocate space for our shared ring buffer. */
 	kernel_data->map_entry.buffer.user_buffer = kmalloc(user_buffer_size, GFP_USER);
