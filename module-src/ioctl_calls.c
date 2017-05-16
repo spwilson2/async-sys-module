@@ -1,3 +1,8 @@
+/*
+* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
+*
+* This file is released under the GPLv2
+*/
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/stddef.h>

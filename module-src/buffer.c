@@ -1,3 +1,8 @@
+/*
+* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
+*
+* This file is released under the GPLv2
+*/
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/file.h>

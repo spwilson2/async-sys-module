@@ -1,3 +1,8 @@
+/*
+* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
+*
+* This file is released under the GPLv2
+*/
 #ifndef __MODULE_SRC_COMMON_H
 #define __MODULE_SRC_COMMON_H
 #define mpr_warn(args...) pr_warn("as_sys: " args)

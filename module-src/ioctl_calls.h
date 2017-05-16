@@ -1,3 +1,8 @@
+/*
+* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
+*
+* This file is released under the GPLv2
+*/
 #ifndef __MODULE_SRC_IOCTL_H
 #define __MODULE_SRC_IOCTL_H
 #include <as_sys/ioctl.h>
