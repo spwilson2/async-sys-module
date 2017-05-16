@@ -1,8 +1,9 @@
 /*
-* Copyright (c) 2017 Sean Wilson <spwilson2.edu>
-*
-* This file is released under the GPLv2
-*/
+ * Copyright (c) 2017 Sean Wilson <spwilson2@wisc.edu>
+ *
+ * This file is released under the GPLv2
+ */
+
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/file.h>
@@ -161,10 +162,8 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 
 	struct kernel_data *kernel_data;
 
-	mpr_info("In alloc_buffer 1\n");
 	/* Allocate space for the map entry*/
 	kernel_data = kmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
-	mpr_info("kernel_data %p \n", kernel_data);
 	if (!kernel_data) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
@@ -183,7 +182,6 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	 * process for the allocated buffer.
 	 */
 
-	mpr_info("In alloc_buffer 2\n");
 	// Initilize the lock on the new map_entry's buffer and grab the lock.
 	rwlock_init(&kernel_data->map_entry.buffer.rwlock);
 	write_lock(&kernel_data->map_entry.buffer.rwlock);
@@ -196,9 +194,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 
 	write_lock(&map_wrapper.lock);
 	read_unlock(&file->f_owner.lock);
-	mpr_info("In alloc_buffer 3\n");
 	if (!map_insert(&map_wrapper._root, &kernel_data->map_entry)) {
-	mpr_info("In alloc_buffer 4\n");
 		// There was a duplicate....?
 		write_unlock(&map_wrapper.lock);
 		read_unlock(&file->f_owner.lock);
@@ -207,7 +203,6 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 		kfree(kernel_data);
 		return false;
 	}
-	mpr_info("In alloc_buffer 4.5\n");
 	*buffer = &kernel_data->map_entry.buffer;
 	write_unlock(&map_wrapper.lock);
 
@@ -216,7 +211,6 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	 */
 	list_add(&kernel_data->file_ll_node.list, &((struct file_ll_head*)file->private_data)->list);
 	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
-	mpr_info("In alloc_buffer 5\n");
 
 	return true;
 }
