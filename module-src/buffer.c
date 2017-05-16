@@ -287,3 +287,35 @@ buffer_init_file(struct file *file)
 	*private_data = new_ll;
 	return true;
 }
+
+void
+buffer_free_file(struct file *file)
+{
+	struct kernel_data *kernel_data;
+	struct file_ll_node *cur_node, *next_node;
+
+	spin_lock(&((struct file_ll_head*)file->private_data)->spinlock);
+	write_lock(&map_wrapper.lock);
+
+	/*
+	 * Iterate over the linked list of buffer entries associated with this
+	 * file deleting the enteries and then freeing their buffers.
+	 */
+	list_for_each_entry_safe(cur_node,
+				 next_node,
+				 ((struct file_ll_head*)file->private_data)->list,
+				 list) {
+
+		kernel_data = container_of(cur_node, struct kernel_data, file_ll_node);
+		/* Grab the write lock for the ability to delete this buffer. */
+		write_lock(&kernel_data->map_entry.buffer.rwlock);
+		/* Remove the mapping from the tree. */
+		rb_erase(&kernel_data->map_entry.node, &map_wrapper._root);
+		/* Remove this linked list node from the list. */
+		list_del(&kernel_data->file_ll_node.list);
+		kfree(kernel_data->map_entry.buffer.user_buffer);
+		kfree(kernel_data);
+	}
+	write_unlock(&map_wrapper.lock);
+	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
+}
