@@ -31,24 +31,24 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	struct buffer_slab *buffer_slab;
 	struct queue_metadata *queue_metadata;
 
-	mpr_info("In int_async_queue 1\n");
+	trace();
 	/* First try creating the buffer region for us to store the queue. */
 	/* NOTE: We should be given the buffer_slab holding its lock. */
 	if (!alloc_buffer(QUEUE_SIZE(nr_events), sizeof(struct queue_metadata),
 				file, &buffer_slab))
 		return false;
 
-	mpr_info("In int_async_queue 2\n");
+	trace();
 	/* Fill in the metadata head of the queue. */
 	queue_metadata = buffer_slab->kernel_buffer;
-	mpr_info("kernel_buffer: %p\n", buffer_slab->kernel_buffer);
+	trace();
 
-	mpr_info("In int_async_queue 2.1\n");
+	trace();
 	queue_metadata->nr_events = nr_events;
-	mpr_info("In int_async_queue 2.2\n");
+	trace();
 	queue_metadata->syscall_queue = buffer_slab->user_buffer;
 
-	mpr_info("In int_async_queue 3\n");
+	trace();
 	/* FIXME: Likely issue here copying to userspace but the code acts like
 	 * it's accessable.
 	 */
@@ -64,7 +64,7 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	 * its lock.
 	 */
 	write_unlock(&buffer_slab->rwlock);
-	mpr_info("In int_async_queue 4\n");
+	trace();
 	return true;
 }
 

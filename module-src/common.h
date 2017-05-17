@@ -8,6 +8,7 @@
 #define mpr_warn(args...) pr_warn("as_sys: " args)
 #define mpr_info(args...) pr_info("as_sys: " args)
 #define mpr_err(args...)  pr_err("as_sys: " args)
+#define trace() mpr_info("%s: %s - %d", __FILE__, __func__, __LINE__)
 
 #include <linux/slab.h>
 static __always_inline void *_dkmalloc(size_t size, gfp_t flags, const char*flag_string) {

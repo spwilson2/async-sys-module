@@ -6,3 +6,4 @@ Module.symvers
 *.d
 modules.order
 .tmp_versions
+test-app

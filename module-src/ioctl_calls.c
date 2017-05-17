@@ -27,7 +27,7 @@ async_setup(void *user_argument, struct file *file_p)
 	struct _async_setup setup_args;
 	async_context_t ctx_id;
 
-	mpr_info("In async_setup 1\n");
+	trace();
 	if (!access_ok(VERIFY_READ, user_argument, sizeof(setup_args)))
 		return -1;
 	if (copy_from_user(&setup_args, user_argument, sizeof(setup_args)))
@@ -36,19 +36,20 @@ async_setup(void *user_argument, struct file *file_p)
 		return -1;
 	if (setup_args.nr_events > MAX_NR)
 		return -1;
-	mpr_info("In async_setup 2\n");
+	trace();
 
 	if (!init_async_queue(setup_args.nr_events, file_p, &ctx_id))
 		return -1;
-	mpr_info("In async_setup 3\n");
+	trace();
 
 	/* Copy out the async_context_t if it succeeded. */
 	if (copy_to_user(setup_args.ctx_idp, &ctx_id, sizeof(ctx_id))) {
+		trace();
 		/* Copying failed, let's clean up the state we just made. */
 		mpr_info("Failed to copy data to user pointer.");
 		deinit_async_queue(file_p, ctx_id);
 	}
-	mpr_info("In async_setup 5\n");
+	trace();
 
 	return 0;
 }

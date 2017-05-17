@@ -161,10 +161,10 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 
 	struct kernel_data *kernel_data;
 
-	mpr_info("In alloc_buffer 1\n");
+	trace();
 	/* Allocate space for the map entry*/
 	kernel_data = dkmalloc(sizeof(struct kernel_data) + kernel_buffer_size, GFP_KERNEL);
-	mpr_info("kernel_data %p \n", kernel_data);
+	trace();
 	if (!kernel_data) {
 		// TODO: Need to try a vmalloc if unable to succeed.
 		return false; // Failed to alloc.
@@ -183,7 +183,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	 * process for the allocated buffer.
 	 */
 
-	mpr_info("In alloc_buffer 2\n");
+	trace();
 	// Initilize the lock on the new map_entry's buffer and grab the lock.
 	rwlock_init(&kernel_data->map_entry.buffer.rwlock);
 	write_lock(&kernel_data->map_entry.buffer.rwlock);
@@ -196,9 +196,9 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 
 	write_lock(&map_wrapper.lock);
 	read_unlock(&file->f_owner.lock);
-	mpr_info("In alloc_buffer 3\n");
+	trace();
 	if (!map_insert(&map_wrapper._root, &kernel_data->map_entry)) {
-	mpr_info("In alloc_buffer 4\n");
+	trace();
 		// There was a duplicate....?
 		write_unlock(&map_wrapper.lock);
 		read_unlock(&file->f_owner.lock);
@@ -207,7 +207,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 		dkfree(kernel_data);
 		return false;
 	}
-	mpr_info("In alloc_buffer 4.5\n");
+	trace();
 	*buffer = &kernel_data->map_entry.buffer;
 	write_unlock(&map_wrapper.lock);
 
@@ -216,7 +216,7 @@ alloc_buffer(size_t user_buffer_size, size_t kernel_buffer_size,
 	 */
 	list_add(&kernel_data->file_ll_node.list, &((struct file_ll_head*)file->private_data)->list);
 	spin_unlock(&((struct file_ll_head*)file->private_data)->spinlock);
-	mpr_info("In alloc_buffer 5\n");
+	trace();
 
 	return true;
 }
@@ -327,6 +327,7 @@ buffer_free_file(struct file *file)
 				 next_node,
 				 &((struct file_ll_head*)file->private_data)->list,
 				 list) {
+		trace();
 
 		kernel_data = container_of(cur_node, struct kernel_data, file_ll_node);
 		/* Grab the write lock for the ability to delete this buffer. */
