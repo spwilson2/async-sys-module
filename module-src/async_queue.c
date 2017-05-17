@@ -49,7 +49,15 @@ init_async_queue(unsigned long nr_events, struct file *file, async_context_t *ct
 	queue_metadata->syscall_queue = buffer_slab->user_buffer;
 
 	mpr_info("In int_async_queue 3\n");
-	init_buffer((circle_buffer*)&queue_metadata->syscall_queue, sizeof(struct async_cb), nr_events);
+	/* FIXME: Likely issue here copying to userspace but the code acts like
+	 * it's accessable.
+	 */
+	//if (!init_buffer((circle_buffer*)&queue_metadata->syscall_queue,
+	//		 sizeof(struct async_cb), nr_events)) {
+	//	free_buffer(buffer_slab->key.buffer_uid , file);
+	//	write_unlock(&buffer_slab->rwlock);
+	//	return false;
+	//}
 
 	*ctx_id = buffer_slab->key.buffer_uid;
 	/* We have set up our queue manager for the buffer_slab. We can release

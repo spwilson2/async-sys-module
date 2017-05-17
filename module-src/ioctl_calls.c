@@ -43,14 +43,12 @@ async_setup(void *user_argument, struct file *file_p)
 	mpr_info("In async_setup 3\n");
 
 	/* Copy out the async_context_t if it succeeded. */
-	if (copy_to_user(setup_args.ctx_idp, &ctx_id, sizeof(ctx_id)))
-		return -1;
-	else {
+	if (copy_to_user(setup_args.ctx_idp, &ctx_id, sizeof(ctx_id))) {
 		/* Copying failed, let's clean up the state we just made. */
+		mpr_info("Failed to copy data to user pointer.");
 		deinit_async_queue(file_p, ctx_id);
-	mpr_info("In async_setup 5\n");
 	}
-	mpr_info("In async_setup 6\n");
+	mpr_info("In async_setup 5\n");
 
 	return 0;
 }
