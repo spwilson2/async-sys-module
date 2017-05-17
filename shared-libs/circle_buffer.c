@@ -21,7 +21,7 @@ int init_buffer(circle_buffer* buf, size_t data_size, size_t enteries) {
 	buf->size = enteries;
 	buf->head_idx = buf->tail_idx = 0;
 	mutex_init(&buf->tail_lock);
-	return false;
+	return true;
 }
 
 /* Insert the given `void *` into the circular_buffer, may block if no space.. */
